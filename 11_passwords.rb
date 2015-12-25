@@ -16,7 +16,7 @@ module Password; refine String do
   end
 
   def good?
-    !confusing? && ascending? && two_repeats?
+    two_repeats? && !confusing? && ascending?
   end
 end; end
 
