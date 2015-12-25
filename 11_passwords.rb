@@ -1,10 +1,14 @@
+module Password
+  ASCEND = Regexp.union(*(?a..?z).each_cons(3).map(&:join))
+end
+
 module Password; refine String do
   def confusing?
     match?(/i|o|l/)
   end
 
   def ascending?
-    each_char.each_cons(3).any? { |a, b, c| b.ord - 1 == a.ord && c.ord - 2 == a.ord }
+    match?(ASCEND)
   end
 
   def two_repeats?
