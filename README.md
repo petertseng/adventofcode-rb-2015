@@ -37,6 +37,14 @@ Problems that I thought fit this criterion:
   CKK only slowed down the solution from 0.7 seconds to 1.0 seconds:
   A small price to pay in exchange for ensuring that the solution is correct.
 
+## Ruby version compatibility
+
+Hello from the future!
+Even though Ruby 2.2 was the current Ruby version at the time of the event, this repository uses Ruby 2.4 because I like to keep things up to date.
+I have no qualms about rewriting Git history either.
+
+No attempt will be made to maintain compatibility with any earier Ruby versions.
+
 ## On Refinements
 
 My use of these is probably a bit gratuitous.
