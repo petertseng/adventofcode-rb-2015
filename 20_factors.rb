@@ -54,6 +54,34 @@ def house_upper_bound(target, elf_limit: nil)
   bound
 end
 
+# Euler-Mascheroni constant
+GAMMA = 0.57721566490153286060651209008240243104215933593992
+
+def house_lower_bound(target, upper)
+  # Robin's inequality:
+  # \sigma(n) < e^\gamma n \log \log n
+  # For sufficiently-large n (n > 5040) if Riemann hypothesis true.
+  #
+  # So the lower bound for target T is:
+  # the first n for which e^\gamma n \log \log n > T
+  #
+  # n \log \log n > \frac{T}{e^\gamma}
+  #
+  # Since we are searching for a lower bound,
+  # we can increase \log \log n to \log \log T
+  #
+  # n > \frac{T}{e^\gamma \log \log T}
+  n = (target / (Math::E ** GAMMA * Math.log(Math.log(target)))).ceil
+
+  # That n was approximate. Binary search to get a better one?
+  n = (n..upper).bsearch { |i|
+    Math::E ** GAMMA * i * Math.log(Math.log(i)) >= target
+  }
+
+  # Eh, if n was less than 5040 we probably aren't gaining much anyway.
+  n > 5040 ? n : 1
+end
+
 def give_gifts(target, multiplier, elf_limit: nil)
   elf_value_needed = (target / multiplier.to_f).ceil
 
@@ -63,7 +91,7 @@ def give_gifts(target, multiplier, elf_limit: nil)
   best = max_house
   gifts = Array.new(1 + max_house, 0)
 
-  min_house = 1
+  min_house = house_lower_bound(elf_value_needed, max_house)
 
   (1..max_house).each { |elf|
     if elf < min_house
