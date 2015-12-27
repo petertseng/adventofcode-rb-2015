@@ -63,15 +63,29 @@ def give_gifts(target, multiplier, elf_limit: nil)
   best = max_house
   gifts = Array.new(1 + max_house, 0)
 
+  min_house = 1
+
   (1..max_house).each { |elf|
-    nums = (elf..max_house).step(elf)
-    nums = nums.take(elf_limit) if elf_limit
+    if elf < min_house
+      skipped = (min_house - 1) / elf
+      start_house = (skipped + 1) * elf
+    else
+      skipped = 0
+      start_house = elf
+    end
+
+    nums = (start_house..max_house).step(elf)
+    if elf_limit
+      next if skipped >= elf_limit
+      nums = nums.take(elf_limit - skipped)
+    end
+
     nums.each_with_index { |house, i|
       total_gifts = (gifts[house] += elf)
       if total_gifts >= elf_value_needed
         best = [best, house].min
         # If it's my first house, no later elf can undercut me.
-        return best if i == 0
+        return best if i == 0 && skipped == 0
       end
     }
   }
