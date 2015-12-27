@@ -11,12 +11,16 @@ BOSS_HP = Integer(nums[0])
 BOSS_DAMAGE = Integer(nums[1])
 
 class Game
+  # As long as hashes have deterministic enumeration order,
+  # the order in which spells are listed here affects search priority.
+  # This order was roughly determined to be pretty good.
+  # At least, much better than magic missile in highest priority.
   COSTS = {
+    poison: 173,
+    shield: 113,
+    recharge: 229,
     magic_missile: 53,
     drain: 73,
-    shield: 113,
-    poison: 173,
-    recharge: 229,
   }
 
   def initialize(
