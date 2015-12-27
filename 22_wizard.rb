@@ -93,6 +93,21 @@ class Game
     nil
   end
 
+  # A lower bound of how much it would cost to kill the boss.
+  # This may not even be *achievable*, but it's a lower bound.
+  # It is used to determine when we can't beat the current best.
+  def min_cost_to_kill
+    after_poison = @boss_hp - @poison_time * 3
+    return 0 if after_poison <= 0
+    poisons, after_poison = after_poison.divmod(18)
+    missiles = (after_poison / 4.0).ceil
+
+    poison_cost = COSTS[:poison]
+    poisons_cost = poisons * poison_cost
+    missile_cost = missiles * COSTS[:magic_missile]
+    poisons_cost + [missile_cost, poison_cost].min
+  end
+
   private
 
   def tick_timers
@@ -181,10 +196,10 @@ class Search
   end
 
   def best(game = @game, spells_so_far: [], cost_so_far: 0, turn: 1)
-    # Prune: we've seen a better one already.
+    # Prune: We can't possibly do better than the current best.
     # This is about a 2x speedup (0.45 seconds -> 0.2 seconds)
-    if cost_so_far > @best_cost
-      puts "Best so far is #@best_cost, pruning a #{cost_so_far}" if @verbose
+    if game.min_cost_to_kill + cost_so_far > @best_cost
+      puts "Best so far is #@best_cost, pruning a #{cost_so_far} + #{game.min_cost_to_kill}" if @verbose
       @max_prunes += 1
       return Float::INFINITY
     end
