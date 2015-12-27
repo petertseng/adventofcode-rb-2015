@@ -1,4 +1,4 @@
-containers = ARGF.map(&method(:Integer)).freeze
+containers = ARGF.map(&method(:Integer)).sort.reverse.freeze
 
 # You'd think this is no better than the 2^n brute force solution
 # (because of the two recursive calls to ways below).
