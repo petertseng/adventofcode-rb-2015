@@ -1,4 +1,4 @@
-containers = ARGF.each_line.map(&method(:Integer))
+containers = ARGF.each_line.map(&method(:Integer)).sort.reverse
 
 # You'd think this is no better than the 2^n brute force solution
 # (because of the two recursive calls to ways below).
