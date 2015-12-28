@@ -1,5 +1,6 @@
 EXAMPLES = ARGV.delete('-d')
 VERBOSE = ARGV.delete('-v')
+SEARCH_BOSS_HP = ARGV.delete('-b')
 
 nums = if ARGV.size >= 2 && ARGV.all? { |arg| arg.match?(/^\d+$/) }
   ARGV
@@ -259,6 +260,51 @@ class Search
   def to_s
     "Pruned #@max_prunes max, #@seen_prunes seen, cast #@spells_cast spells\nSpells to cast: #@best_list"
   end
+end
+
+# This code is used to generate tables of max beatable boss HP.
+# It is NOT USED when calculating the solution to day 22.
+# (It is used when -b flag is passed).
+def max_beatable(hard: true, verbose: true)
+  # High-HP battles below the min_damage just took too long for my liking.
+  # (Easy 2 damage: 304. Easy 3 damage: 300. Hard 1 damage: 270.)
+  # On easy mode, you can beat any 1-damage boss:
+  # Just cycle between recharge and drain.
+  min_damage = hard ? 2 : 4
+  max_hp = hard ? 157 : 299
+
+  (min_damage..51).to_h { |damage|
+    if damage <= 8
+      # Silly shortcut: On low-damage battles, test the max first.
+      # It works a lot of the time.
+      g = Game.new(boss_hp: max_hp - 1, boss_damage: damage, hard: hard)
+      if Search.new(g).best != Float::INFINITY
+        puts "#{damage}: #{max_hp - 1}" if verbose
+        next [damage, max_hp - 1]
+      end
+    end
+
+    this_max = (4..max_hp).bsearch { |n|
+      g = Game.new(boss_hp: n, boss_damage: damage, hard: hard)
+      Search.new(g).best == Float::INFINITY
+    }
+    unless this_max
+      puts "#{damage}: unknown" if verbose
+      next [damage, nil]
+    end
+
+    max_hp = this_max
+    # I format my results as "highest HP I'm able to beat".
+    # The bsearch returns "lowest HP I can't beat", so we just subtract 1.
+    puts "#{damage}: #{this_max - 1}" if verbose
+    [damage, this_max - 1]
+  }
+end
+
+if SEARCH_BOSS_HP
+  puts max_beatable(hard: false)
+  puts max_beatable(hard: true)
+  Kernel.exit(0)
 end
 
 [false, true].each { |hard|
