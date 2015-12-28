@@ -214,6 +214,33 @@ class Search
     @verbose = verbose
   end
 
+  # This code is used to generate tables of max beatable boss HP.
+  # It is NOT USED when calculating the solution to day 22.
+  # (It is used when -b flag is passed).
+  def can_win?(game = @game, turn: 1)
+    # Prune: Seen this state already.
+    if @seen[turn].has_key?(game.to_i)
+      @seen_prunes += 1
+      return false
+    end
+    @seen[turn][game.to_i] = true
+
+    legal = game.legal_spells
+    # We got no moves so we lose.
+    return false if legal.empty?
+
+    legal.keys.any? { |move|
+      game2 = game.dup
+      winner = game2.cast_spell(move)
+
+      case winner
+      when :boss; false
+      when :me; true
+      else can_win?(game2, turn: turn + 1)
+      end
+    }
+  end
+
   def best(game = @game, spells_so_far: [], cost_so_far: 0, turn: 1)
     # Prune: We can't possibly do better than the current best.
     # This is about a 2x speedup (0.45 seconds -> 0.2 seconds)
@@ -278,7 +305,7 @@ def max_beatable(hard: true, verbose: true)
       # Silly shortcut: On low-damage battles, test the max first.
       # It works a lot of the time.
       g = Game.new(boss_hp: max_hp - 1, boss_damage: damage, hard: hard)
-      if Search.new(g).best != Float::INFINITY
+      if Search.new(g).can_win?
         puts "#{damage}: #{max_hp - 1}" if verbose
         next [damage, max_hp - 1]
       end
@@ -286,7 +313,7 @@ def max_beatable(hard: true, verbose: true)
 
     this_max = (4..max_hp).bsearch { |n|
       g = Game.new(boss_hp: n, boss_damage: damage, hard: hard)
-      Search.new(g).best == Float::INFINITY
+      !Search.new(g).can_win?
     }
     unless this_max
       puts "#{damage}: unknown" if verbose
