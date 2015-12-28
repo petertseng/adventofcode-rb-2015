@@ -23,6 +23,8 @@ class Game
     drain: 73,
   }
 
+  TIMER_BITS = 9
+
   def initialize(
     my_hp: 50,
     my_mp: 500,
@@ -45,13 +47,25 @@ class Game
     # we need to remove remove hard mode HP now.
     # There can be no timers, so we don't need to tick_timers
     @my_hp -= 1 if @hard
+
+    # Offsets for storing game state: My HP comes after timers and boss HP.
+    # We need to calculate how many bits the boss's HP needs.
+    @hp_offset = TIMER_BITS + boss_hp.bit_length
+    # Drain may heal our HP, but at most we drain HP equal to the boss's HP.
+    # +1 if the boss's HP is odd (shouldn't matter, boss would be dead).
+    # And the boss is dealing at least 1 damage per drain we do.
+    # So we can halve the max drain (+2 for if the boss dies on last one).
+    max_hp_bits = (my_hp + 2 + boss_hp / 2).bit_length
+    @mp_offset = @hp_offset + max_hp_bits
   end
 
   def to_i
-    # my MP, 6 my HP, 6 boss HP, 3 shield, 3 poison, 3 recharge
+    # 3 shield, 3 poison, 3 recharge since their timers are all < 8
+    # Bit widths for my HP and boss HP were calculated in initialize.
+    # MP goes in the most significant position.
     # (My MP is potentially unbounded, but Recharge-only battles are losses)
     timers = @shield_time << 6 | @poison_time << 3 | @recharge_time
-    @my_mp << 21 | @my_hp << 15 | @boss_hp << 9 | timers
+    @my_mp << @mp_offset | @my_hp << @hp_offset | @boss_hp << TIMER_BITS | timers
   end
 
   def to_s
