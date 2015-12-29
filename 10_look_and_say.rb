@@ -99,12 +99,30 @@ ELEMENTS = [
 ].freeze
 ELEMENTS.each { |e| e[2].freeze; e.freeze }
 
+CACHE = Hash.new { |h, k| h[k] = {} }
+
 as_string, index = ELEMENTS.map.with_index { |(elt, _, _), i| [elt.to_s, i] }.bsearch { |elt, _| x <= elt }
 raise "#{x} is an invalid starting seed" if as_string != x
 
-elements = [index]
+def length(element_index, rounds)
+  return ELEMENTS[element_index][1] if rounds == 0
+  CACHE[rounds][element_index] ||= ELEMENTS[element_index][2].sum { |c|
+    length(c, rounds - 1)
+  }
+end
 
-rounds.max.times { |i|
-  elements = elements.flat_map { |e| ELEMENTS[e][2] }
-  puts elements.sum { |e| ELEMENTS[e][1] } if rounds.include?(i + 1)
+def pre_fill_cache(max_round)
+  current_cache = ELEMENTS.map { |elt| elt[1] }
+  max_round.times {
+    current_cache = ELEMENTS.map { |elt|
+      elt[2].sum { |c| current_cache[c] }
+    }
+  }
+  CACHE[max_round] = current_cache.freeze
+end
+
+rounds.each { |r|
+  # Pre-fill the cache so we don't make too many recursive calls to length.
+  pre_fill_cache(r - ELEMENTS.length) if r > ELEMENTS.length
+  puts length(index, r)
 }
