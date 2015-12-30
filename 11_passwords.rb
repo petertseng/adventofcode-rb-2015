@@ -43,8 +43,11 @@ module Password; refine String do
         replace(prefix + 'aa')
         next
       elsif pairs.uniq(&:first).size < 2
-        # Just need one more pair.
-        make_pair!
+        if match?(ASCEND)
+          make_pair!
+        else
+          make_ascending_and_pair!
+        end
         next
       end
 
@@ -156,6 +159,65 @@ module Password; refine String do
     # Changes involving the fourth-to-last character:
     prefix = self[0...-3].succ.unconfuse!
     replace(prefix + (prefix.match?(ASCEND) ? 'aaa' : 'abc'))
+
+    self
+  end
+
+  # Increments self at least once.
+  # Stops upon reaching the lowest lexicographic string that has a pair and straight.
+  def make_ascending_and_pair!
+    succ!
+    unconfuse!
+
+    # For an early return to happen, at least three characters must change.
+    # Obviously you can't do it with just one.
+    # You can't do it with just two: the straight blocks the pair.
+    # abbz -> abca (you can't get to abcc)
+    # Anything else such as abbzz -> abcaa already has two pairs!
+
+    # Can't make pair and straight only changing one character.
+
+    # Changes involving the second-to-last character:
+    if make_straight_end!(-2)
+      # Becomes end of straight and first of pair.
+      self[-1] = self[-2]
+      return self
+    end
+
+    # Changes involving the third-to-last character:
+    if self[-4] > self[-3] && self[-4].match?(ASCEND_PREFIX1)
+      # Becomes second of pair and start of straight.
+      self[-3..-1] = straight_from(self[-4])
+      return self
+    elsif make_straight_end!(-3)
+      self[-2..-1] = 'aa'
+      return self
+    elsif make_straight_middle!(-3)
+      self[-1] = self[-2]
+      return self
+    end
+
+    # Can't be first of pair; would leave no room for straight.
+
+    # Changes involving the fourth-to-last character:
+    choices = straight_choices(-4)
+    choices[:second] = "#{self[-5]}abc" if self[-5] > self[-4]
+    choices[:end] << 'aaa' if choices[:end]
+    choices[:middle] << 'aa' if choices[:middle]
+    # Given a straight xyz, we could make a pair with xxyz or xyzz.
+    # xxyz wins lexicographically.
+    if (b = choices[:begin])
+      choices[:begin] = "#{b[0]}#{b}"
+    end
+
+    unless choices.empty?
+      self[-4..-1] = choices.values.min
+      return self
+    end
+
+    # Changes involving the fifth-to-last character:
+    prefix = self[0...-4].succ.unconfuse!
+    replace(prefix + (prefix.match?(ASCEND) ? 'aaaa' : 'aabc'))
 
     self
   end
