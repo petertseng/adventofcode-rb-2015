@@ -1,9 +1,15 @@
 module Password
   PAIR = /(.)\1/
 
-  ASCEND = Regexp.union(*(?a..?z).each_cons(3).map(&:join))
+  STRAIGHTS = (?a..?z).to_a.join.split(/i|o|l/).flat_map { |x|
+    x.chars.each_cons(3).to_a
+  }.map(&:join).map(&:freeze).freeze
+
+  ASCEND = Regexp.union(*STRAIGHTS)
   # Strings that can be the prefix of a straight
-  ASCEND_PREFIX2 = Regexp.union(*(?a..?y).each_cons(2).map(&:join))
+  ASCEND_PREFIX2 = Regexp.union(*STRAIGHTS.map { |s| s[0..1] })
+  # Strings that can be the first character of a straight
+  ASCEND_PREFIX1 = Regexp.union(*STRAIGHTS.map { |s| s[0] })
 end
 
 module Password; refine String do
@@ -13,6 +19,7 @@ module Password; refine String do
 
   def next_password!
     succ!
+    unconfuse!
 
     loop {
       pairs = []
@@ -41,11 +48,6 @@ module Password; refine String do
         next
       end
 
-      if (i = index(/i|o|l/))
-        succ_index!(i)
-        next
-      end
-
       unless match?(ASCEND)
         make_ascending!
         next
@@ -55,6 +57,22 @@ module Password; refine String do
     }
   end
 
+  def succ_no_confuse
+    ans = succ
+    ans.confusing? ? ans.succ : ans
+  end
+
+  def confusing?
+    self == ?i || self == ?o || self == ?l
+  end
+
+  def unconfuse!
+    if (i = index(/i|o|l/))
+      succ_index!(i)
+    end
+    self
+  end
+
   # Increments self at least once.
   # Stops upon reaching the lowest lexicographic string that has a pair.
   # (This one's public because it gets called on a prefix to make two pairs)
@@ -62,6 +80,7 @@ module Password; refine String do
     last_was_z = self[-1] == ?z
 
     succ!
+    unconfuse!
 
     # Return now for cbz -> cca but NOT aaa -> aab
     return self if last_was_z && self[-3] == self[-2]
@@ -77,7 +96,7 @@ module Password; refine String do
       self[-1] = self[-2]
     elsif self[-2] < self[-1]
       # The last two chars have to change. Two cases:
-      if self[-3].ord == self[-2].ord + 1
+      if self[-3] == self[-2].succ_no_confuse
         # The third-to-last and second-to-last character make a pair.
         # For example, cbc -> cca (which comes before ccc)
         self[-2] = self[-3]
@@ -85,7 +104,8 @@ module Password; refine String do
       else
         # The second-to-last and last character make a pair.
         # For example, cab -> cbb (which comes before cca)
-        self[-2..-1] = self[-2].succ * 2
+        next_char = self[-2].succ_no_confuse
+        self[-2..-1] = next_char * 2
         # It's impossible for second-to-last to be 'z'.
         # No letter sorts after 'z'.
         # So we won't accidentally turn a 'z' into an 'aa' this way.
@@ -109,6 +129,7 @@ module Password; refine String do
   # Stops upon reaching the lowest lexicographic string that ascends.
   def make_ascending!
     succ!
+    unconfuse!
 
     return self if match?(ASCEND)
 
@@ -133,7 +154,7 @@ module Password; refine String do
     end
 
     # Changes involving the fourth-to-last character:
-    prefix = self[0...-3].succ
+    prefix = self[0...-3].succ.unconfuse!
     replace(prefix + (prefix.match?(ASCEND) ? 'aaa' : 'abc'))
 
     self
@@ -147,7 +168,7 @@ module Password; refine String do
   def straight_choices(idx)
     choices = {}
 
-    if self[idx - 1] == self[idx]
+    if self[idx - 1] >= self[idx]
       if self[(idx - 2)..(idx - 1)].match?(ASCEND_PREFIX2)
         choices[:end] = self[idx - 1].succ
       end
@@ -159,7 +180,8 @@ module Password; refine String do
     end
 
     if self[idx] < ?x
-      choices[:begin] = straight_from(self[idx].succ)
+      next_char = next_straight_start(self[idx])
+      choices[:begin] = straight_from(next_char)
     end
 
     choices
@@ -187,7 +209,16 @@ module Password; refine String do
 
   # Could this string start a straight at idx-1 if idx is incremented?
   def increments_to_straight_middle?(idx)
-    self[idx - 1] < ?x || self[idx - 1] == ?x && self[idx] < ?y
+    c = self[idx - 1]
+    # If first char is x, need to make sure idx is not y or z.
+    # If it gets incremented, we can't make a straight.
+    c.match?(ASCEND_PREFIX1) && (c != ?x || self[idx] < ?y)
+  end
+
+  def next_straight_start(char)
+    next_char = char.succ
+    next_char.succ! until next_char.match?(ASCEND_PREFIX1)
+    next_char
   end
 
   def straight_from(char)
