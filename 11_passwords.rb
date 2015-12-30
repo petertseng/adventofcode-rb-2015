@@ -26,6 +26,12 @@ module Password; refine String do
       scan(PAIR) { |s|
         pairs << [s, Regexp.last_match.offset(0).first]
       }
+      ascents = []
+      scan(ASCEND) { |s|
+        ascents << [s, Regexp.last_match.offset(0).first]
+      }
+
+      pairs_needed = 0
 
       # SAFETY:
       # An unsafe pair is one that:
@@ -36,22 +42,42 @@ module Password; refine String do
       # If we have an unsafe pair, the next password will not include it.
       # That means we can pretend it's not there.
       if pairs.empty? || pairs.size == 1 && pairs[0][1] > length - 4
+        pairs_needed = 2
+      elsif pairs.uniq(&:first).size < 2
+        pairs_needed = 1
+      end
+
+      # Safety applies to straights/ascents too.
+      # An unsafe ascent is alone and MUST be destroyed before finding a pair.
+      # If need two pairs, tightest packing is abccdd: ascent starts at -6
+      # If need one pair, tightest packing is abcc: ascent starts at -4
+      # An ascent starting after these positions is unsafe.
+      ascent_safe_threshold = pairs_needed >= 2 ? 6 : 4
+      ascent_is_unsafe = ascents.size == 1 && ascents[0][1] > length - ascent_safe_threshold
+      need_ascent = ascents.empty? || ascent_is_unsafe
+
+      if pairs_needed == 2
         # The first string that would generate two pairs:
         # One pair in the all-but-last-two prefix.
         # One pair in the suffix, the last two (aa)
         prefix = self[0...-2].make_pair!
         replace(prefix + 'aa')
         next
-      elsif pairs.uniq(&:first).size < 2
-        if match?(ASCEND)
-          make_pair!
-        else
+      end
+
+      if pairs_needed == 1
+        if need_ascent
           make_ascending_and_pair!
+        else
+          make_pair!
         end
         next
       end
 
-      unless match?(ASCEND)
+      # We do not need pairs.
+      # If we have a straight (whether it's unsafe), this is a valid password.
+      # Else, make one.
+      if ascents.empty?
         make_ascending!
         next
       end
