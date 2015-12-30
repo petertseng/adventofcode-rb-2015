@@ -57,11 +57,15 @@ module Password; refine String do
       need_ascent = ascents.empty? || ascent_is_unsafe
 
       if pairs_needed == 2
-        # The first string that would generate two pairs:
-        # One pair in the all-but-last-two prefix.
-        # One pair in the suffix, the last two (aa)
-        prefix = self[0...-2].make_pair!
-        replace(prefix + 'aa')
+        if need_ascent
+          make_ascending_and_two_pairs!
+        else
+          # The first string that would generate two pairs:
+          # One pair in the all-but-last-two prefix.
+          # One pair in the suffix, the last two (aa)
+          prefix = self[0...-2].make_pair!
+          replace(prefix + 'aa')
+        end
         next
       end
 
@@ -244,6 +248,68 @@ module Password; refine String do
     # Changes involving the fifth-to-last character:
     prefix = self[0...-4].succ.unconfuse!
     replace(prefix + (prefix.match?(ASCEND) ? 'aaaa' : 'aabc'))
+
+    self
+  end
+
+  # Increments self at least once.
+  # Stops upon reaching the lowest lexicographic string that has two pairs and a straight.
+  def make_ascending_and_two_pairs!
+    succ!
+    unconfuse!
+
+    # Don't need to check for completion, you can't get this in one succ.
+    # At least four characters need to change (see below).
+    # So that'd be similar to xybcczzz -> xybcdaaa, but that's only one pair.
+    # As for xbcczzzz -> xbcdaaaa, that had two safe pairs.
+    # So this function doesn't get called on input like xbcczzzz.
+
+    # First-Third: Impossible; not enough characters to work with.
+    # * If third char ends a straight, no room for two pairs after.
+    # * If third char ends a pair, no room for both a straight and a pair after.
+
+    # Changes involving the fourth-to-last character:
+    if self[-5] > self[-4] && self[-5].match?(ASCEND_PREFIX1)
+      # Becomes end of straight and first of pair.
+      self[-4..-2] = straight_from(self[-5])
+      self[-1] = self[-2]
+      return self
+    elsif make_straight_end!(-4)
+      self[-3..-1] = "#{self[-4]}aa"
+      return self
+    end
+
+    # Can't be mid of straight, no room for two pairs after.
+    # Can't be first of pair, no room for both a straight and a pair after.
+
+    # Changes involving the fifth-to-last character:
+    choices = straight_choices(-5)
+    choices[:second] = "#{self[-6]}aabc" if self[-6] > self[-5]
+    choices[:end] << 'aaaa' if choices[:end]
+    choices[:middle] << "#{choices[:middle][-1]}aa" if choices[:middle]
+    # Given a straight xyz, the only way to make two pairs is xxyzz
+    # The only other case is if xyzza works (if the character before were x)
+    # But in either case xxyzz is superior.
+    if (b = choices[:begin])
+      choices[:begin] = "#{b[0]}#{b}#{b[-1]}"
+    end
+
+    unless choices.empty?
+      self[-5..-1] = choices.values.min
+      return self
+    end
+
+    # Changes involving the sixth-to-last character:
+    prefix = self[0...-5].succ.unconfuse!
+    self[0...-5] = prefix
+
+    if prefix.match?(ASCEND)
+      self[-5..-1] = 'aaaaa'
+    elsif prefix.match?(PAIR) || prefix[-1] == ?a
+      self[-5..-1] = 'aaabc'
+    else
+      self[-5..-1] = 'aabcc'
+    end
 
     self
   end
