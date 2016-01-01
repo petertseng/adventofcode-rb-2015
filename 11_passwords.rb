@@ -10,6 +10,9 @@ module Password
   ASCEND_PREFIX2 = Regexp.union(*STRAIGHTS.map { |s| s[0..1] })
   # Strings that can be the first character of a straight
   ASCEND_PREFIX1 = Regexp.union(*STRAIGHTS.map { |s| s[0] })
+
+  NEXT_STRAIGHT_START = {}
+  STRAIGHT_FROM = {}
 end
 
 module Password; refine String do
@@ -385,16 +388,20 @@ module Password; refine String do
   end
 
   def next_straight_start(char)
-    next_char = char.succ
-    next_char.succ! until next_char.match?(ASCEND_PREFIX1)
-    next_char
+    NEXT_STRAIGHT_START[char] ||= begin
+      next_char = char.succ
+      next_char.succ! until next_char.match?(ASCEND_PREFIX1)
+      next_char.freeze
+    end
   end
 
   def straight_from(char)
-    s = char
-    s << (second = s.succ)
-    s << second.succ
-    s
+    STRAIGHT_FROM[char] ||= begin
+      s = char.dup
+      s << (second = s.succ)
+      s << second.succ
+      s.freeze
+    end
   end
 end; end
 
