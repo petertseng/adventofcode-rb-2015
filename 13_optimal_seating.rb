@@ -1,3 +1,5 @@
+require_relative 'lib/hamiltonian'
+
 class PeopleMatrix
   def initialize(pairs)
     @matrix = Hash.new { |h, k| h[k] = Hash.new(0) }
@@ -6,42 +8,16 @@ class PeopleMatrix
       @matrix[p1][p2] += happiness
       @matrix[p2][p1] += happiness
     }
+
+    @min_value = @matrix.map { |k, v| v.values.min }.min
+    @matrix.each_value { |v| v.each_key { |k| v[k] -= @min_value } }
   end
 
-  def best(circular: true)
-    circular ? best_cycle : best_line
-  end
-
-  def score(seating, circular: true)
-    circular ? score_cycle(seating) : score_line(seating)
-  end
-
-  private
-
-  def best_cycle
-    people = @matrix.keys
-    first_person = people.shift
-    # Total happiness is invariant to rotation.
-    # So we eliminate rotations by fixing the first person.
-    people.permutation.max_by { |seating|
-      seating << first_person
-      score_cycle(seating)
+  def bests
+    Graph.maxes(@matrix).each { |k, v|
+      edges = @matrix.size - (k == :path ? 1 : 0)
+      v[:cost] += @min_value * edges
     }
-  end
-
-  def score_cycle(seating)
-    seating.each_with_index.sum { |p1, i|
-      p2 = seating[i - 1]
-      @matrix[p1][p2]
-    }
-  end
-
-  def best_line
-    @matrix.keys.permutation.max_by { |seating| score_line(seating) }
-  end
-
-  def score_line(seating)
-    seating.each_cons(2).sum { |p1, p2| @matrix[p1][p2] }
   end
 end
 
@@ -56,9 +32,7 @@ people = PeopleMatrix.new(ARGF.each_line.map { |line|
   [p1, p2, happiness]
 })
 
-# Inserting "me" into the table with 0 score == a non-circular table.
-[true, false].each { |circular|
-  best = people.best(circular: circular)
-  puts people.score(best, circular: circular)
-  puts best.join(', ') if verbose
+people.bests.values_at(:cycle, :path).each { |best|
+  puts best[:cost]
+  puts best[:path].join(', ') if verbose
 }
