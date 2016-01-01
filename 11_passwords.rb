@@ -82,7 +82,22 @@ module Password; refine String do
       # If we have a straight (whether it's unsafe), this is a valid password.
       # Else, make one.
       if ascents.empty?
-        make_ascending!
+        # If there are exactly two pairs and one is too close to the end,
+        # at least one will be destroyed before finding a straight.
+        #
+        # e.g. abbzz -> abcaa destroys the bb pair.
+        # If the other pair is elsewhere, such as bbeaa,
+        # clearly you can't make the straight without destroying the aa pair.
+        #
+        # aadcabbc also clearly requires destroying the bb pair.
+        #
+        # This rule is inapplicable with three pairs.
+        # The last one can be safely destroyed such as aabbaacd -> aabbabca
+        if pairs.size == 2 && pairs[-1][1] > length - 4
+          make_ascending_and_pair!
+        else
+          make_ascending!
+        end
         next
       end
 
