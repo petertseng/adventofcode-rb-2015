@@ -4,6 +4,8 @@ These are my solutions to http://adventofcode.com
 
 All solutions are written in Ruby.
 
+[![Build Status](https://travis-ci.org/petertseng/adventofcode-rb-2015.svg?branch=master)](https://travis-ci.org/petertseng/adventofcode-rb-2015)
+
 ## Input
 
 In general, all solutions can be invoked in both of the following ways:
