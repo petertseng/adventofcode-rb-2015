@@ -207,7 +207,7 @@ class Search
     @game = game.dup
     @best_cost = Float::INFINITY
     @best_list = []
-    @seen = Hash.new { |h, k| h[k] = {} }
+    @seen = {}
     @max_prunes = 0
     @seen_prunes = 0
     @spells_cast = 0
@@ -219,11 +219,11 @@ class Search
   # (It is used when -b flag is passed).
   def can_win?(game = @game, turn: 1)
     # Prune: Seen this state already.
-    if @seen[turn].has_key?(game.to_i)
+    if @seen.has_key?(game.to_i)
       @seen_prunes += 1
       return false
     end
-    @seen[turn][game.to_i] = true
+    @seen[game.to_i] = true
 
     legal = game.legal_spells
     # We got no moves so we lose.
@@ -252,12 +252,12 @@ class Search
 
     # Prune: Seen this state already.
     # This is about a 50x speedup (10 seconds -> 0.2 seconds).
-    if (prev_cost = @seen[turn][game.to_i]) && prev_cost <= cost_so_far
+    if (prev_cost = @seen[game.to_i]) && prev_cost <= cost_so_far
       puts "Seen #{game} at turn #{turn}, cost #{prev_cost} vs #{cost_so_far}" if @verbose
       @seen_prunes += 1
       return Float::INFINITY
     end
-    @seen[turn][game.to_i] = cost_so_far
+    @seen[game.to_i] = cost_so_far
 
     legal = game.legal_spells
     # We got no moves so we lose.
