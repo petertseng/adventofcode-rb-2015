@@ -88,7 +88,6 @@ def give_gifts(target, multiplier, elf_limit: nil)
   # Find an upper bound on the house number.
   # This reduces the work we need to do in the loop.
   max_house = house_upper_bound(elf_value_needed, elf_limit: elf_limit)
-  best = max_house
   gifts = Array.new(1 + max_house, 0)
 
   min_house = house_lower_bound(elf_value_needed, max_house)
@@ -108,16 +107,13 @@ def give_gifts(target, multiplier, elf_limit: nil)
       nums = nums.take(elf_limit - skipped)
     end
 
-    nums.each_with_index { |house, i|
-      total_gifts = (gifts[house] += elf)
-      if total_gifts >= elf_value_needed
-        best = [best, house].min
-        # If it's my first house, no later elf can undercut me.
-        return best if i == 0 && skipped == 0
-      end
-    }
+    nums.each_with_index { |house, i| gifts[house] += elf }
+
+    # If it's my first house, no later elf can undercut me.
+    return elf if elf >= min_house && gifts[elf] >= elf_value_needed
   }
-  best
+
+  raise 'Impossible; some elf must have exceeded by now. Upper bound is wrong.'
 end
 
 # It's absoutely untenable to iterate every house and find its factors.
