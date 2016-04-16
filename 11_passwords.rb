@@ -166,16 +166,6 @@ module Password; refine String do
     self
   end
 
-  private
-
-  # Increments the string at the specified index.
-  # All later indices will change to "a".
-  def succ_index!(i)
-    self[i] = self[i].succ
-    self[(i + 1)..-1] = ?a * (length - 1 - i)
-    self
-  end
-
   # Increments self at least once.
   # Stops upon reaching the lowest lexicographic string that ascends.
   def make_ascending!
@@ -208,6 +198,16 @@ module Password; refine String do
     prefix = self[0...-3].succ.unconfuse!
     replace(prefix + (prefix.match?(ASCEND) ? 'aaa' : 'abc'))
 
+    self
+  end
+
+  private
+
+  # Increments the string at the specified index.
+  # All later indices will change to "a".
+  def succ_index!(i)
+    self[i] = self[i].succ
+    self[(i + 1)..-1] = ?a * (length - 1 - i)
     self
   end
 
