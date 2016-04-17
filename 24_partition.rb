@@ -31,11 +31,20 @@ def partition(weights, num_groups)
   each_group = sum / num_groups
 
   (min_needed(weights, each_group)..(weights.size / num_groups)).each { |n|
+    # First, find all combinations that add up to the target value.
+    # We do not yet check partitionability of the remaining weights,
+    # because CKK is expensive to run.
     winning_combos = weights.combination(n).select { |c|
-      c.sum == each_group && CKK[num_groups - 1].new(weights - c).best == 0
+      c.sum == each_group
     }
-    next if winning_combos.empty?
-    return winning_combos.min_by { |c| c.reduce(:*) }
+    winning_combos.sort_by! { |c| c.reduce(:*) }
+    # Now, in order of QE, use CKK to check partitionability.
+    # Return the first combination that wins.
+    # In this way, hopefully we only run CKK on a few combinations.
+    winner = winning_combos.find { |c|
+      CKK[num_groups - 1].new(weights - c).best == 0
+    }
+    return winner if winner
   }
 end
 
