@@ -38,8 +38,7 @@ Problems that I thought fit this criterion:
   In fact, for my input, every grouping of lowest cardinality resulted in being able to balance the remaining packages.
   However, a complete solution should check for partitionability of the remaining packages, and ways to do so efficiently are quite fascinating (read the papers mentioned in the header of `ckk.rb`).
   I decided implementing Complete Karmarkar-Karp was sufficient, and didn't even get into Sequential Number Partitioning or Recursive Number Partitioning.
-  CKK only slowed down the solution from 0.7 seconds to 1.0 seconds:
-  A small price to pay in exchange for ensuring that the solution is correct.
+  Due to only running CKK on reasonable candidates, the additional correctness check had no noticeable impact on runtime.
 
 ## Ruby version compatibility
 
