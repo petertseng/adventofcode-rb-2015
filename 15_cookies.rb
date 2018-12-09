@@ -9,43 +9,35 @@ ingredients = ARGF.each_line.to_h { |line|
   }.freeze]
 }.freeze
 traits = ingredients.each_value.flat_map(&:keys).uniq.freeze
-non_calorie_traits = (traits - [:calories]).freeze
 
-best = 0
-best_list = nil
-best500 = 0
-best500_list = nil
+def cookie(ingredients, index, remaining, traits_so_far, results, amounts)
+  ingredient = ingredients[index]
 
-def trait_score(ingredient_amounts, trait)
-  ingredient_amounts.sum { |ingredient, amount|
-    ingredient[trait] * amount
+  if index == ingredients.size - 1
+    calories = traits_so_far.delete(:calories) + remaining * ingredient[:calories]
+    score = traits_so_far.reduce(1) { |acc, (trait, v)|
+      acc * [remaining * ingredient[trait] + v, 0].max
+    }
+
+    amounts[index] = remaining
+    results[:best] = [score, amounts.dup] if score > results[:best][0]
+    results[:best500] = [score, amounts.dup] if calories == 500 && score > results[:best500][0]
+    return
+  end
+
+  (0..remaining).each { |amount|
+    traits_with = traits_so_far.merge(ingredient) { |_, v1, v2|
+      v1 + amount * v2
+    }
+    amounts[index] = amount
+    cookie(ingredients, index + 1, remaining - amount, traits_with, results, amounts)
   }
 end
 
-# This sucks because it only works for 4 ingredients.
-(0..100).each { |x1|
-  (0..(100 - x1)).each { |x2|
-    (0..(100 - x1 - x2)).each { |x3|
-      x4 = 100 - x1 - x2 - x3
-      ingredient_amounts = ingredients.values.zip([x1, x2, x3, x4])
-      score = non_calorie_traits.map { |trait|
-        [trait_score(ingredient_amounts, trait), 0].max
-      }.reduce(:*)
-      calories = trait_score(ingredient_amounts, :calories)
+results = {best: [0, nil], best500: [0, nil]}
+cookie(ingredients.values, 0, 100, traits.to_h { |t| [t, 0] }, results, ingredients.map { nil })
 
-      if score > best
-        best = score
-        best_list = [x1, x2, x3, x4]
-      end
-      if calories == 500 && score > best500
-        best500 = score
-        best500_list = [x1, x2, x3, x4]
-      end
-    }
-  }
+results.values_at(:best, :best500).each { |score, list|
+  puts score
+  puts ingredients.keys.zip(list).to_h if verbose
 }
-
-puts best
-p ingredients.keys.zip(best_list).to_h if verbose
-puts best500
-p ingredients.keys.zip(best500_list).to_h if verbose
