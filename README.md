@@ -31,7 +31,7 @@ Problems that I thought fit this criterion:
 * 6 (Light grid): The naive approach would be to create a 1000x1000 array of lights and iterate over that. Various approaches are able to instead operate on the rectangles listed in the instructions. I used a sweep line approach.
 * 11 (Passwords): Really bends over backwards to skip generating passwords that can be known in advance to be invalid. Questionable tradeoff of code size for time.
 * 17 (Container Combinations): Dynamic programming to count the number of subsets is quite faster than enumerating every possible combination.
-* 20 (Factors): The algorithm isn't the key point here; it's a single interesting insight about early termination and some aggressive bounding of the search space that combine to get almost a 10x speedup.
+* 20 (Factors): Recursion on the sum of divisors formula.
 * 22 (Wizard): Tree search with pruning of already-beaten branches and already-seen states.
 * 24 (Partition): Most solutions cut corners: As soon as they find a subset that sums to `total / num_groups` they stop and don't check that the remaining packages can be balanced.
   This happens to work because it so happens that for the lowest QE subset, the other packages can in fact be balanced.
